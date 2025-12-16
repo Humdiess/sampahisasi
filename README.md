@@ -1,16 +1,45 @@
-# sampahisasi
+# Sampahisasi
 
-A new Flutter project.
+A Flutter application that uses AI (TensorFlow Lite) to classify waste as Organic or Non-Organic in real-time. Now features an AI Chatbot powered by Google Gemini to answer your waste management questions.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+-   **Real-time Waste Classification**: Detects Organic/Anorganic waste using the camera.
+-   **AI Chatbot**: Ask "Sampahisasi Helper" for recycling tips and waste info (powered by Gemini).
+-   **Gallery Support**: Classify images directly from your photo gallery.
+-   **Flash & Selfie Support**: Toggle flashlight and switch between front/back cameras.
+-   **Clean UI**: Minimalist, distraction-free interface.
 
-A few resources to get you started if this is your first Flutter project:
+## Setup
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1.  **Clone the repository**.
+2.  **Environment Variables**:
+    -   Create a file named `.env` in the root directory.
+    -   Add your Google Gemini API key:
+        ```env
+        GEMINI_API_KEY=your_actual_api_key_here
+        ```
+3.  **Install Dependencies**:
+    ```bash
+    flutter pub get
+    ```
+4.  **Run the App**:
+    ```bash
+    flutter run
+    ```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Building APK
+
+To build a release APK:
+
+```bash
+flutter build apk --release
+```
+
+## Icons
+
+To update the app icon, place your icon at `assets/icon/app_icon.png` and run:
+
+```bash
+flutter pub run flutter_launcher_icons
+```

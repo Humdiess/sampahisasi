@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
@@ -12,6 +13,52 @@ class TfliteService {
 
   bool get isBusy => _isBusy;
   List<String>? get labels => _labels;
+
+  // Classify a static file (e.g. from Gallery)
+  Future<List<double>?> classifyFile(File imageFile) async {
+    if (_interpreter == null || _isBusy) return null;
+    _isBusy = true;
+
+    try {
+      final imageBytes = await imageFile.readAsBytes();
+      final image = img.decodeImage(imageBytes);
+
+      if (image == null) {
+        _isBusy = false;
+        return null;
+      }
+
+      final resized = img.copyResize(image, width: 224, height: 224);
+      final input = _imageToFloatList(resized).reshape([1, 224, 224, 3]);
+      var output = List.filled(1 * 2, 0.0).reshape([1, 2]);
+
+      _interpreter!.run(input, output);
+
+      _isBusy = false;
+      return List<double>.from(output[0]);
+    } catch (e) {
+      print('TfliteService: Error classifying file: $e');
+      _isBusy = false;
+      return null;
+    }
+  }
+
+  // Refactored helper to convert image to float list
+  Float32List _imageToFloatList(img.Image image) {
+    var convertedBytes = Float32List(1 * 224 * 224 * 3);
+    var buffer = Float32List.view(convertedBytes.buffer);
+    int pixelIndex = 0;
+
+    for (var i = 0; i < 224; i++) {
+      for (var j = 0; j < 224; j++) {
+        var pixel = image.getPixel(j, i);
+        buffer[pixelIndex++] = (pixel.r / 127.5) - 1.0;
+        buffer[pixelIndex++] = (pixel.g / 127.5) - 1.0;
+        buffer[pixelIndex++] = (pixel.b / 127.5) - 1.0;
+      }
+    }
+    return convertedBytes;
+  }
 
   Future<void> loadModel() async {
     try {
