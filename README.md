@@ -43,3 +43,5 @@ To update the app icon, place your icon at `assets/icon/app_icon.png` and run:
 ```bash
 flutter pub run flutter_launcher_icons
 ```
+## License
+This project is licensed under the MIT License.
