@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui'; // Import for ImageFilter
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -198,7 +199,25 @@ class _CameraScreenState extends State<CameraScreen>
   void _openChat() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const ChatScreen()),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const ChatScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0); // Start from bottom
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: child,
+          );
+        },
+      ),
     );
   }
 
@@ -285,106 +304,153 @@ class _CameraScreenState extends State<CameraScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Scaled Camera Preview
-          Transform.scale(
-            scale:
-                1 /
-                (_controller!.value.aspectRatio *
-                    MediaQuery.of(context).size.aspectRatio),
-            child: Center(child: CameraPreview(_controller!)),
+          // Animated Camera Preview Switch
+          // We use a SizedBox.expand to ensure it fills space
+          SizedBox.expand(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 600),
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: _controller != null && _controller!.value.isInitialized
+                  ? Transform.scale(
+                      key: ValueKey(
+                        _currentLensDirection,
+                      ), // Key triggers animation on change
+                      scale:
+                          1 /
+                          (_controller!.value.aspectRatio *
+                              MediaQuery.of(context).size.aspectRatio),
+                      child: Center(child: CameraPreview(_controller!)),
+                    )
+                  : Container(
+                      // Placeholder during switch
+                      key: const ValueKey("loader"),
+                      color: Colors.black,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.green),
+                      ),
+                    ),
+            ),
           ),
 
           // Scanner Overlay
           const ScannerOverlay(),
 
-          // TOP CONTROLS BAR
-          // Left: Flash, Chat | Right: Gallery, Switch
-          // Title centered (or just balanced)
+          // GLASS TOP BAR
           Positioned(
-            top: 50,
-            left: 20,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Left Group: Flash & Chat
-                Row(
-                  children: [
-                    // Flash
-                    _buildCircleButton(
-                      icon: _flashMode == FlashMode.torch
-                          ? Icons.flash_on
-                          : Icons.flash_off,
-                      color: isFrontCamera
-                          ? Colors.white38
-                          : (_flashMode == FlashMode.torch
-                                ? Colors.yellow
-                                : Colors.white),
-                      onPressed: isFrontCamera ? null : _toggleFlash,
-                      bgColor: isFrontCamera
-                          ? Colors.grey.withOpacity(0.3)
-                          : Colors.black45,
-                    ),
-                    const SizedBox(width: 12),
-                    // Chat
-                    _buildCircleButton(
-                      icon: Icons.chat_bubble_outline,
-                      onPressed: _openChat,
-                    ),
-                  ],
-                ),
+            top: 40,
+            left: 16,
+            right: 16,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Left: Flash & Chat
+                      Row(
+                        children: [
+                          _buildGlassIconButton(
+                            icon: _flashMode == FlashMode.torch
+                                ? Icons.flash_on
+                                : Icons.flash_off,
+                            color: isFrontCamera
+                                ? Colors.white38
+                                : (_flashMode == FlashMode.torch
+                                      ? Colors.yellow
+                                      : Colors.white),
+                            onPressed: isFrontCamera ? null : _toggleFlash,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildGlassIconButton(
+                            icon: Icons.chat_bubble_outline,
+                            onPressed: _openChat,
+                          ),
+                        ],
+                      ),
 
-                // Center Title (Optional, or just Empty to push sides)
-                // User asked for "balanced", maybe just text in middle?
-                // Given space constraints, let's keep it simple or minimal.
-                // User said "together with toolbar ... so balance right left"
+                      // Center: Title
+                      const Text(
+                        "Sampahisasi",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
 
-                // Right Group: Gallery & Switch
-                Row(
-                  children: [
-                    // Gallery (Moved from bottom)
-                    _buildCircleButton(
-                      icon: Icons.image,
-                      onPressed: _pickImage,
-                    ),
-                    const SizedBox(width: 12),
-                    // Switch
-                    _buildCircleButton(
-                      icon: Icons.cameraswitch_rounded,
-                      onPressed: _switchCamera,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Instruction (Centered below top bar)
-          Positioned(
-            top: 120,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  "Sampahisasi - Arahkan ke sampah",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                      // Right: Gallery & Switch
+                      Row(
+                        children: [
+                          _buildGlassIconButton(
+                            icon: Icons.image,
+                            onPressed: _pickImage,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildGlassIconButton(
+                            icon: Icons.cameraswitch_rounded,
+                            onPressed: _switchCamera,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
+
+          // CONDITIONAL INSTRUCTION (Glassmorphism)
+          if (_currentPrediction == null)
+            Positioned(
+              top: 140, // Below Top Bar
+              left: 0,
+              right: 0,
+              child: Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                      child: const Text(
+                        "Arahkan kamera ke sampah",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Result Overlay (Placed BEFORE floating button in Stack? No, we want Button ON TOP)
           if (_currentPrediction != null)
@@ -400,17 +466,24 @@ class _CameraScreenState extends State<CameraScreen>
     );
   }
 
-  Widget _buildCircleButton({
+  Widget _buildGlassIconButton({
     required IconData icon,
     required VoidCallback? onPressed,
     Color color = Colors.white,
-    Color bgColor = Colors.black45,
   }) {
     return Container(
-      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(
+          0.2,
+        ), // Subtle dark background for contrast inside light glass bar
+        shape: BoxShape.circle,
+      ),
       child: IconButton(
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, color: color, size: 20),
         onPressed: onPressed,
-        icon: Icon(icon, color: color),
       ),
     );
   }

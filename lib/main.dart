@@ -8,7 +8,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Warning: Failed to load .env file: $e");
+    // Continue execution even if env fails
+  }
 
   // Fix orientation to portrait
   await SystemChrome.setPreferredOrientations([
@@ -40,7 +45,14 @@ class MyApp extends StatelessWidget {
           seedColor: Colors.green,
           brightness: Brightness.dark,
         ),
+        brightness: Brightness.dark, // Ensure global brightness matches
         useMaterial3: true,
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: ZoomPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          },
+        ),
       ),
       home: CameraScreen(cameras: cameras),
       debugShowCheckedModeBanner: false,
